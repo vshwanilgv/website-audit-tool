@@ -2,7 +2,7 @@
 
 ## 1. Overview
 
-An AI-native internal tool for EIGHT25MEDIA that accepts a single URL, extracts factual page metrics via raw HTML scraping (word count, headings, CTAs, links, images, meta tags), then passes those structured metrics to Claude to generate grounded insights and prioritized recommendations. Every audit run produces a full prompt log capturing the system prompt, user prompt, raw model response, and parsed output — so the AI's reasoning is always auditable.
+An AI-native internal tool for EIGHT25MEDIA that accepts a single URL, extracts factual page metrics via raw HTML scraping (word count, headings, CTAs, links, images, meta tags), then passes those structured metrics to an LLM to generate grounded insights and prioritized recommendations. Every audit run produces a full prompt log capturing the system prompt, user prompt, raw model response, and parsed output — so the AI's reasoning is always auditable.
 
 ---
 
@@ -24,7 +24,7 @@ The tool is split into three strictly separated layers:
 
 - **Layer 1 (Scraper):** `lib/scraper.ts` — deterministic HTML extraction using `node-fetch` and `cheerio`. Zero AI involvement. Returns a `RawMetrics` object with word count, heading counts, CTA count, internal/external link counts, image alt-text coverage, meta title/description, and a 2000-character page text sample.
 
-- **Layer 2 (AI Analysis):** `lib/ai.ts` — receives the `RawMetrics` struct and the URL; constructs a system prompt and user prompt; calls the Claude API; parses the JSON response into `AIOutput`. Never touches the DOM or HTML.
+- **Layer 2 (AI Analysis):** `lib/ai.ts` — receives the `RawMetrics` struct and the URL; constructs a system prompt and user prompt; calls the LLM API; parses the JSON response into `AIOutput`. Never touches the DOM or HTML.
 
 - **Layer 3 (Orchestration):** `app/api/audit/route.ts` — sequences the scrape call, then the AI call, assembles a full `AuditLog` (including both prompts and raw model output), fire-and-forgets the log write, and returns a lean `AuditResult` to the frontend. The full log never leaves the server.
 
@@ -60,7 +60,7 @@ Every audit run writes a complete log to `/logs/{audit_id}.json`. Each log conta
 - `ai_request.system_prompt` — the exact system prompt sent
 - `ai_request.user_prompt` — the exact user prompt sent, with all metrics injected
 - `ai_request.model`, `temperature`, `max_tokens`
-- `ai_response.duration_ms` — Claude's response latency
+- `ai_response.duration_ms` — the LLM's response latency
 - `ai_response.raw_output` — the model's raw response string before any parsing
 - `ai_response.parsed_output` — the structured `AIOutput` if parsing succeeded
 - `ai_response.parse_error` — the parse exception message if parsing failed, otherwise null
@@ -76,7 +76,7 @@ Prompt logs can also be inspected directly from the UI via the **"View Prompt Lo
 - **JavaScript rendering:** The scraper uses raw HTTP fetch. Client-side rendered pages (React SPAs, Vue apps) will return incomplete metrics because the JS has not executed. Playwright integration would resolve this and is the clear next step.
 - **Single page only:** No crawling, sitemap analysis, or multi-page comparison. One URL = one audit.
 - **CTA detection is heuristic:** Detection is based on link text pattern matching against common marketing phrases. It will miss non-standard CTAs and may over-count buttons that are not actually CTAs.
-- **No rate limiting or caching:** Multiple rapid requests to the same URL will hit both the target site and the Claude API each time. A simple in-memory or Redis cache would eliminate redundant calls.
+- **No rate limiting or caching:** Multiple rapid requests to the same URL will hit both the target site and the LLM API each time. A simple in-memory or Redis cache would eliminate redundant calls.
 
 ---
 
@@ -164,7 +164,7 @@ Vercel KV, PlanetScale, or Upstash Redis.
 
 - Headless browser integration (Playwright) for JS-rendered pages — the single biggest accuracy improvement
 - Page screenshot capture and visual analysis passed alongside text metrics
-- Caching audit results by URL + content hash to avoid redundant Claude calls
+- Caching audit results by URL + content hash to avoid redundant LLM calls
 - Streaming AI responses to the frontend for faster perceived performance
 - Comparative auditing — run two URLs and diff the results side by side
 - Export audit report as a formatted PDF
