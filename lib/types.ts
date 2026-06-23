@@ -73,4 +73,9 @@ export interface AuditResult {
   metrics: RawMetrics;
   ai_output: AIOutput | null;
   error: string | null;
+  prompt_log: {
+    system_prompt: string;
+    user_prompt: string;
+    raw_output: string;
+  } | null;
 }
