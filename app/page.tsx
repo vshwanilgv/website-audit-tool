@@ -212,6 +212,34 @@ function AIPanel({ result }: { result: AuditResult }) {
   );
 }
 
+interface ParsedOutput {
+  thinking?: string;
+  insights?: { [key: string]: string };
+  recommendations?: Array<{
+    priority: number;
+    severity: string;
+    action: string;
+    reasoning: string;
+  }>;
+}
+
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  function handleCopy() {
+    navigator.clipboard.writeText(text).catch(() => {});
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }
+  return (
+    <button
+      onClick={handleCopy}
+      className="absolute top-2 right-2 text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 px-2 py-1 rounded transition-colors"
+    >
+      {copied ? "Copied!" : "Copy"}
+    </button>
+  );
+}
+
 function LogsModal({
   promptLog,
   onClose,
@@ -219,10 +247,33 @@ function LogsModal({
   promptLog: AuditResult["prompt_log"];
   onClose: () => void;
 }) {
+  if (!promptLog) return null;
+
+  let parsedOutput: ParsedOutput | null = null;
+  try {
+    parsedOutput = JSON.parse(promptLog.raw_output) as ParsedOutput;
+  } catch {
+    parsedOutput = null;
+  }
+
+  const insightLabels: { key: string; label: string }[] = [
+    { key: "seo_structure", label: "SEO Structure" },
+    { key: "messaging_clarity", label: "Messaging Clarity" },
+    { key: "cta_usage", label: "CTA Usage" },
+    { key: "content_depth", label: "Content Depth" },
+    { key: "ux_concerns", label: "UX Concerns" },
+  ];
+
+  const severityStyles: Record<string, string> = {
+    critical: "bg-red-100 text-red-700 border border-red-300",
+    moderate: "bg-amber-100 text-amber-700 border border-amber-300",
+    minor: "bg-green-100 text-green-700 border border-green-300",
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 pt-10 px-4 pb-10">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl flex flex-col max-h-[80vh]">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 shrink-0">
           <h2 className="font-bold text-gray-800">Prompt Log</h2>
           <button
             onClick={onClose}
@@ -231,10 +282,127 @@ function LogsModal({
             &times;
           </button>
         </div>
-        <div className="overflow-y-auto p-4 flex-1">
-          <pre className="text-xs overflow-auto whitespace-pre-wrap break-all bg-gray-50 border border-gray-200 rounded p-4">
-            {JSON.stringify(promptLog, null, 2)}
-          </pre>
+
+        <div className="overflow-y-auto flex-1 p-5 space-y-6">
+
+          {/* Section 1 — System Prompt */}
+          <div>
+            <p className="text-xs uppercase tracking-wider text-gray-400 mb-2">
+              System Prompt
+            </p>
+            <div className="relative">
+              <pre className="bg-gray-900 text-gray-100 text-xs font-mono p-4 pr-16 rounded-lg whitespace-pre-wrap break-words max-h-64 overflow-y-auto">
+                {promptLog.system_prompt}
+              </pre>
+              <CopyButton text={promptLog.system_prompt} />
+            </div>
+          </div>
+
+          {/* Section 2 — User Prompt */}
+          <div className="border-t border-gray-100 pt-6">
+            <p className="text-xs uppercase tracking-wider text-gray-400 mb-2">
+              User Prompt
+            </p>
+            <div className="relative">
+              <pre className="bg-gray-900 text-gray-100 text-xs font-mono p-4 pr-16 rounded-lg whitespace-pre-wrap break-words max-h-64 overflow-y-auto">
+                {promptLog.user_prompt}
+              </pre>
+              <CopyButton text={promptLog.user_prompt} />
+            </div>
+          </div>
+
+          {/* Section 3 — Model Response */}
+          <div className="border-t border-gray-100 pt-6">
+            <p className="text-xs uppercase tracking-wider text-gray-400 mb-4">
+              Model Response
+            </p>
+
+            {parsedOutput ? (
+              <div className="space-y-5">
+                {parsedOutput.thinking && (
+                  <div>
+                    <p className="text-xs font-semibold text-indigo-400 uppercase tracking-wider mb-2">
+                      Thinking
+                    </p>
+                    <div className="bg-indigo-950 text-indigo-100 text-sm p-4 rounded-lg leading-relaxed">
+                      {parsedOutput.thinking}
+                    </div>
+                  </div>
+                )}
+
+                {parsedOutput.insights && (
+                  <div>
+                    <p className="text-xs font-semibold text-indigo-400 uppercase tracking-wider mb-2">
+                      Insights
+                    </p>
+                    <div className="space-y-2">
+                      {insightLabels.map(({ key, label }) =>
+                        parsedOutput?.insights?.[key] ? (
+                          <div
+                            key={key}
+                            className="flex gap-3 bg-gray-50 border border-gray-100 rounded-lg p-3"
+                          >
+                            <span className="text-xs font-bold text-gray-500 w-36 shrink-0 pt-0.5">
+                              {label}
+                            </span>
+                            <span className="text-sm text-gray-700">
+                              {parsedOutput.insights[key]}
+                            </span>
+                          </div>
+                        ) : null
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {parsedOutput.recommendations && parsedOutput.recommendations.length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold text-indigo-400 uppercase tracking-wider mb-2">
+                      Recommendations
+                    </p>
+                    <ol className="space-y-3">
+                      {[...parsedOutput.recommendations]
+                        .sort((a, b) => a.priority - b.priority)
+                        .map((rec) => {
+                          const badge = rec.severity ?? "minor";
+                          const badgeStyle =
+                            severityStyles[badge] ?? severityStyles.minor;
+                          return (
+                            <li
+                              key={rec.priority}
+                              className="flex gap-3 bg-indigo-50 border border-indigo-100 rounded-lg p-3"
+                            >
+                              <span className="flex-shrink-0 w-6 h-6 rounded-full bg-indigo-600 text-white text-xs font-bold flex items-center justify-center">
+                                {rec.priority}
+                              </span>
+                              <div>
+                                <div className="flex items-center gap-2 mb-0.5">
+                                  <span
+                                    className={`text-xs font-semibold px-2 py-0.5 rounded-full ${badgeStyle}`}
+                                  >
+                                    {badge.toUpperCase()}
+                                  </span>
+                                  <p className="text-sm font-semibold text-indigo-900">
+                                    {rec.action}
+                                  </p>
+                                </div>
+                                <p className="text-xs text-gray-500 leading-relaxed">
+                                  {rec.reasoning}
+                                </p>
+                              </div>
+                            </li>
+                          );
+                        })}
+                    </ol>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <pre className="text-xs text-gray-700 whitespace-pre-wrap break-all bg-gray-50 border border-gray-200 rounded p-4">
+                {promptLog.raw_output}
+              </pre>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -331,7 +499,7 @@ export default function Home() {
         {loading && (
           <div className="flex items-center justify-center py-16 text-gray-400 text-sm gap-3">
             <Spinner />
-            <span>Analyzing page — scraping metrics and calling with AI...</span>
+            <span>Analyzing page ...</span>
           </div>
         )}
 
