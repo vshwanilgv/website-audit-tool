@@ -485,7 +485,7 @@ export default function Home() {
         {/* Input form */}
         <form onSubmit={handleSubmit} className="flex gap-3 mb-6">
           <input
-            type="url"
+            type="text"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             placeholder="example.com or https://example.com"
