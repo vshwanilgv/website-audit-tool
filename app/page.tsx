@@ -351,7 +351,7 @@ export default function Home() {
         {loading && (
           <div className="flex items-center justify-center py-16 text-gray-400 text-sm gap-3">
             <Spinner />
-            <span>Analyzing page — scraping metrics then calling Claude...</span>
+            <span>Analyzing page — scraping metrics then calling with AI...</span>
           </div>
         )}
 
