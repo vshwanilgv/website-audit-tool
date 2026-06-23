@@ -65,9 +65,6 @@ function MetricsPanel({ result }: { result: AuditResult }) {
       <h2 className="text-lg font-bold text-blue-800 mb-4 flex items-center gap-2">
         <span className="inline-block w-2.5 h-2.5 rounded-full bg-blue-500" />
         Factual Metrics
-        <span className="text-xs font-normal text-gray-400 ml-1">
-          (raw extraction — no AI)
-        </span>
       </h2>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-5">
@@ -153,9 +150,6 @@ function AIPanel({ result }: { result: AuditResult }) {
       <h2 className="text-lg font-bold text-indigo-800 mb-4 flex items-center gap-2">
         <span className="inline-block w-2.5 h-2.5 rounded-full bg-indigo-500" />
         AI Insights &amp; Recommendations
-        <span className="text-xs font-normal text-gray-400 ml-1">
-          (Gemini {result.ai_output ? "gemini-2.5-flash" : ""})
-        </span>
       </h2>
 
       <div className="mb-6">
@@ -180,24 +174,38 @@ function AIPanel({ result }: { result: AuditResult }) {
         <ol className="space-y-3">
           {recommendations
             .sort((a, b) => a.priority - b.priority)
-            .map((rec) => (
-              <li
-                key={rec.priority}
-                className="flex gap-3 bg-indigo-50 border border-indigo-100 rounded-lg p-3"
-              >
-                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-indigo-600 text-white text-xs font-bold flex items-center justify-center">
-                  {rec.priority}
-                </span>
-                <div>
-                  <p className="text-sm font-semibold text-indigo-900">
-                    {rec.action}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
-                    {rec.reasoning}
-                  </p>
-                </div>
-              </li>
-            ))}
+            .map((rec) => {
+              const badge = rec.severity ?? "minor";
+              const severityStyles = {
+                critical: "bg-red-100 text-red-700 border border-red-300",
+                moderate: "bg-amber-100 text-amber-700 border border-amber-300",
+                minor: "bg-green-100 text-green-700 border border-green-300",
+              };
+              const badgeStyle = severityStyles[badge] ?? severityStyles.minor;
+              return (
+                <li
+                  key={rec.priority}
+                  className="flex gap-3 bg-indigo-50 border border-indigo-100 rounded-lg p-3"
+                >
+                  <span className="flex-shrink-0 w-6 h-6 rounded-full bg-indigo-600 text-white text-xs font-bold flex items-center justify-center">
+                    {rec.priority}
+                  </span>
+                  <div>
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${badgeStyle}`}>
+                        {badge.toUpperCase()}
+                      </span>
+                      <p className="text-sm font-semibold text-indigo-900">
+                        {rec.action}
+                      </p>
+                    </div>
+                    <p className="text-xs text-gray-500 leading-relaxed">
+                      {rec.reasoning}
+                    </p>
+                  </div>
+                </li>
+              );
+            })}
         </ol>
       </div>
     </div>

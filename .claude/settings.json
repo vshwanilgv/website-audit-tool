@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C /Users/vishwanibhagya/Development/website-audit-tool diff --name-only)"
+    ]
+  }
+}
