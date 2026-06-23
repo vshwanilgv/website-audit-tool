@@ -2,7 +2,9 @@ import { promises as fs } from "fs";
 import path from "path";
 import type { AuditLog } from "./types";
 
-const LOGS_DIR = path.join(process.cwd(), "logs");
+const LOGS_DIR = process.env.VERCEL
+  ? "/tmp/logs"
+  : path.join(process.cwd(), "logs");
 
 export async function writeAuditLog(log: AuditLog): Promise<void> {
   try {

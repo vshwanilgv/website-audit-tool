@@ -80,7 +80,87 @@ Prompt logs can also be inspected directly from the UI via the **"View Prompt Lo
 
 ---
 
-## 7. What I Would Improve With More Time
+## 7. Deployment
+
+This project is deployed on Vercel using a combination of Vercel's native
+GitHub integration and a GitHub Actions CI pipeline.
+
+### How It Works
+
+**Vercel Native Integration** handles deployment automatically.
+Every push to `main` triggers a production deployment on Vercel.
+No manual deployment steps are required after initial setup.
+
+**GitHub Actions CI** (`.github/workflows/ci.yml`) runs on every push to `main`
+and on pull requests targeting `main`. It performs:
+- TypeScript type checking (`tsc --noEmit`)
+- Next.js production build verification (`next build`)
+
+The CI pipeline does not deploy. It acts as a quality gate that surfaces
+type errors and build failures visibly in GitHub before Vercel serves the update.
+
+### Deployment Architecture
+
+```
+Push to main
+     │
+     ├──► GitHub Actions CI
+     │         Install dependencies (npm ci)
+     │         TypeScript type check (tsc --noEmit)
+     │         Next.js build verification (next build)
+     │         Reports pass/fail in GitHub UI
+     │
+     └──► Vercel Native Integration
+               Builds and deploys automatically
+               Serves production at .vercel.app URL
+```
+
+### Environment Variables
+
+The Gemini API key must be set in two separate places:
+
+| Variable         | Where                                                           | Purpose                          |
+|------------------|-----------------------------------------------------------------|----------------------------------|
+| `GEMINI_API_KEY` | Vercel → Project Settings → Environment Variables              | Runtime — AI calls in production |
+| `GEMINI_API_KEY` | GitHub → Repository Settings → Secrets and variables → Actions | CI build step                    |
+
+**In Vercel, enable the key for all three environments: Production, Preview,
+and Development.** Preview deployments (generated for pull requests and
+non-main branches) will fail to make AI calls if the key is only set for
+Production.
+
+The key is stored encrypted in both Vercel and GitHub. It is never written
+to source code or exposed in build logs. Your code accesses it identically
+in all environments via `process.env.GEMINI_API_KEY`.
+
+### Local Development
+
+```bash
+# .env.local (gitignored — never committed)
+GEMINI_API_KEY=your_key_here
+
+npm run dev
+# http://localhost:3000
+```
+
+### Known Filesystem Limitation on Vercel
+
+Vercel's serverless functions run on a read-only filesystem. The logger
+detects the `VERCEL` environment variable and writes logs to `/tmp/logs`
+instead of the project root `logs/` directory.
+
+Logs written to `/tmp` do not persist between function invocations in
+production. **Prompt logs are fully functional when running locally**
+(`npm run dev`), where they are written to the `logs/` directory and
+persist across requests.
+
+For production log persistence, the recommended next step would be to
+replace the filesystem logger with a lightweight external store such as
+Vercel KV, PlanetScale, or Upstash Redis.
+
+---
+
+## 8. What I Would Improve With More Time
 
 - Headless browser integration (Playwright) for JS-rendered pages — the single biggest accuracy improvement
 - Page screenshot capture and visual analysis passed alongside text metrics
