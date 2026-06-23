@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { AuditResult, AuditLog } from "@/lib/types";
+import type { AuditResult } from "@/lib/types";
 
 // ---------- sub-components ----------
 
@@ -213,19 +213,17 @@ function AIPanel({ result }: { result: AuditResult }) {
 }
 
 function LogsModal({
-  logs,
+  promptLog,
   onClose,
 }: {
-  logs: AuditLog[];
+  promptLog: AuditResult["prompt_log"];
   onClose: () => void;
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 pt-10 px-4 pb-10">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl flex flex-col max-h-[80vh]">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
-          <h2 className="font-bold text-gray-800">
-            Prompt Logs ({logs.length} most recent audits)
-          </h2>
+          <h2 className="font-bold text-gray-800">Prompt Log</h2>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-700 text-xl font-bold leading-none"
@@ -234,13 +232,9 @@ function LogsModal({
           </button>
         </div>
         <div className="overflow-y-auto p-4 flex-1">
-          {logs.length === 0 ? (
-            <p className="text-sm text-gray-500">No logs found.</p>
-          ) : (
-            <pre className="text-xs text-gray-700 whitespace-pre-wrap break-all bg-gray-50 border border-gray-200 rounded p-4">
-              {JSON.stringify(logs, null, 2)}
-            </pre>
-          )}
+          <pre className="text-xs overflow-auto whitespace-pre-wrap break-all bg-gray-50 border border-gray-200 rounded p-4">
+            {JSON.stringify(promptLog, null, 2)}
+          </pre>
         </div>
       </div>
     </div>
@@ -256,8 +250,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
 
   const [logsOpen, setLogsOpen] = useState(false);
-  const [logs, setLogs] = useState<AuditLog[]>([]);
-  const [logsLoading, setLogsLoading] = useState(false);
+  const [promptLog, setPromptLog] = useState<AuditResult["prompt_log"]>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -277,6 +270,7 @@ export default function Home() {
         setError(data.error ?? "Audit failed.");
       } else {
         setResult(data);
+        setPromptLog(data.prompt_log ?? null);
       }
     } catch (err) {
       setError(
@@ -287,24 +281,10 @@ export default function Home() {
     }
   }
 
-  async function handleViewLogs() {
-    setLogsLoading(true);
-    try {
-      const res = await fetch("/api/logs");
-      const data = (await res.json()) as AuditLog[];
-      setLogs(data);
-      setLogsOpen(true);
-    } catch {
-      alert("Failed to load logs.");
-    } finally {
-      setLogsLoading(false);
-    }
-  }
-
   return (
     <main className="min-h-screen py-10 px-4">
       {logsOpen && (
-        <LogsModal logs={logs} onClose={() => setLogsOpen(false)} />
+        <LogsModal promptLog={promptLog} onClose={() => setLogsOpen(false)} />
       )}
 
       <div className="max-w-5xl mx-auto">
@@ -339,11 +319,11 @@ export default function Home() {
           </button>
           <button
             type="button"
-            onClick={handleViewLogs}
-            disabled={logsLoading}
-            className="inline-flex items-center gap-1 border border-gray-300 hover:border-gray-400 text-gray-600 hover:text-gray-800 font-medium px-4 py-2.5 rounded-lg text-sm transition-colors"
+            onClick={() => setLogsOpen(true)}
+            disabled={!promptLog}
+            className="inline-flex items-center gap-1 border border-gray-300 hover:border-gray-400 text-gray-600 hover:text-gray-800 font-medium px-4 py-2.5 rounded-lg text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            {logsLoading ? "Loading..." : "View Prompt Logs"}
+            View Prompt Logs
           </button>
         </form>
 
@@ -351,7 +331,7 @@ export default function Home() {
         {loading && (
           <div className="flex items-center justify-center py-16 text-gray-400 text-sm gap-3">
             <Spinner />
-            <span>Analyzing page — scraping metrics then calling with AI...</span>
+            <span>Analyzing page — scraping metrics and calling with AI...</span>
           </div>
         )}
 

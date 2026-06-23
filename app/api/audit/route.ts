@@ -87,6 +87,11 @@ export async function POST(request: NextRequest) {
       error: parse_error
         ? `AI response could not be parsed: ${parse_error}`
         : null,
+      prompt_log: {
+        system_prompt,
+        user_prompt,
+        raw_output,
+      },
     };
 
     return NextResponse.json(result, { status: 200 });
