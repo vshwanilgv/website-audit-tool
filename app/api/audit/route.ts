@@ -96,11 +96,20 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(result, { status: 200 });
   } catch (err: unknown) {
-    let message = err instanceof Error ? err.message : "Unknown error";
-    if (message.includes("429") || message.includes("Too Many Requests") || message.includes("quota")) {
-      message =
-        "Gemini API quota exceeded or billing not enabled. Ensure your GEMINI_API_KEY is a valid API key (starts with 'AIza') from aistudio.google.com/apikey, and that your project has quota available.";
-    } else if (message.includes("503") || message.includes("Service Unavailable") || message.includes("high demand")) {
+    const errMsg = err instanceof Error ? (err.message ?? "") : "";
+    const isQuota =
+      errMsg.toLowerCase().includes("quota") ||
+      errMsg.toLowerCase().includes("billing not enabled");
+
+    if (isQuota) {
+      return Response.json(
+        { error: "quota_exceeded", message: "Gemini API quota exceeded." },
+        { status: 429 }
+      );
+    }
+
+    let message = errMsg || "Unknown error";
+    if (message.includes("503") || message.includes("Service Unavailable") || message.includes("high demand")) {
       message =
         "Gemini API is currently experiencing high demand. The request was retried 3 times. Please wait a moment and try again.";
     }

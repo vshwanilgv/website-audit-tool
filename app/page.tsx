@@ -419,6 +419,7 @@ export default function Home() {
 
   const [logsOpen, setLogsOpen] = useState(false);
   const [promptLog, setPromptLog] = useState<AuditResult["prompt_log"]>(null);
+  const [quotaError, setQuotaError] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -426,6 +427,7 @@ export default function Home() {
     setLoading(true);
     setResult(null);
     setError(null);
+    setQuotaError(false);
 
     try {
       const res = await fetch("/api/audit", {
@@ -435,7 +437,11 @@ export default function Home() {
       });
       const data = (await res.json()) as AuditResult & { error?: string };
       if (!res.ok) {
-        setError(data.error ?? "Audit failed.");
+        if (data.error === "quota_exceeded") {
+          setQuotaError(true);
+        } else {
+          setError(data.error ?? "Audit failed.");
+        }
       } else {
         setResult(data);
         setPromptLog(data.prompt_log ?? null);
@@ -500,6 +506,19 @@ export default function Home() {
           <div className="flex items-center justify-center py-16 text-gray-400 text-sm gap-3">
             <Spinner />
             <span>Analyzing page ...</span>
+          </div>
+        )}
+
+        {/* Quota error */}
+        {quotaError && !loading && (
+          <div className="flex items-start gap-3 rounded-lg border border-amber-400 bg-amber-50 p-4 text-amber-800">
+            <span className="text-xl">⏳</span>
+            <div>
+              <p className="font-semibold text-sm">Oh! that was too fast.</p>
+              <p className="text-sm mt-0.5">
+                Shall we wait another 2 minutes before the next free scan?
+              </p>
+            </div>
           </div>
         )}
 
