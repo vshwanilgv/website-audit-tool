@@ -421,9 +421,18 @@ export default function Home() {
   const [promptLog, setPromptLog] = useState<AuditResult["prompt_log"]>(null);
   const [quotaError, setQuotaError] = useState(false);
 
+  function normalizeUrl(input: string): string {
+    const trimmed = input.trim();
+    if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+      return trimmed;
+    }
+    return `https://${trimmed}`;
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!url.trim()) return;
+    const normalizedUrl = normalizeUrl(url);
     setLoading(true);
     setResult(null);
     setError(null);
@@ -433,7 +442,7 @@ export default function Home() {
       const res = await fetch("/api/audit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: url.trim() }),
+        body: JSON.stringify({ url: normalizedUrl }),
       });
       const data = (await res.json()) as AuditResult & { error?: string };
       if (!res.ok) {
@@ -479,7 +488,7 @@ export default function Home() {
             type="url"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
-            placeholder="https://example.com"
+            placeholder="example.com or https://example.com"
             required
             className="flex-1 border border-gray-300 rounded-lg px-4 py-2.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400"
           />
