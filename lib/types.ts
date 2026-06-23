@@ -32,11 +32,13 @@ export interface AIInsights {
 
 export interface Recommendation {
   priority: number;
+  severity: "critical" | "moderate" | "minor";
   action: string;
   reasoning: string;
 }
 
 export interface AIOutput {
+  thinking: string;           // Internal reasoning — logged only, not shown in UI
   insights: AIInsights;
   recommendations: Recommendation[];
 }

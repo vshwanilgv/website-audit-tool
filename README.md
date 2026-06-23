@@ -44,6 +44,10 @@ All shared types live in `lib/types.ts` and are imported everywhere — no inlin
 
 **`raw_output` logged separately from `parsed_output`:** Even when JSON parsing succeeds, the raw model response is preserved in the log. If a parse fails, `parse_error` captures the exception message while `raw_output` preserves what the model actually said — so a debugging session always has the full picture.
 
+**Chain of Thought (`thinking` field):** The model is instructed to reason through the metrics explicitly before producing insights. This reasoning is captured in the `thinking` field of the log, making the model's analytical process fully transparent and verifiable. It is intentionally excluded from the UI — it exists for auditability, not presentation.
+
+**Severity scoring:** Each recommendation is assigned a severity level (critical, moderate, minor) by the model based on the metric data. This is enforced in the system prompt rather than computed post-hoc, so the model's severity judgment is grounded in the same reasoning that produced the recommendation.
+
 ---
 
 ## 5. Prompt Logs
